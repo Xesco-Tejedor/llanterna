@@ -1,0 +1,9 @@
+{
+  "name": "Llanterna · Búsqueda de personas desaparecidas",
+  "short_name": "Llanterna",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#14100a",
+  "theme_color": "#14100a",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
