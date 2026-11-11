@@ -138,18 +138,22 @@ async function buscarPrensa(q) {
   u.searchParams.set('maxrecords', '15');
   u.searchParams.set('format', 'json');
   u.searchParams.set('sort', 'hybridrel');
-  let r;
-  try {
-    r = await fetch(u);
-  } catch (e) {
-    throw new Error('El servicio de prensa (GDELT) no ha respondido. Suele limitar a una búsqueda cada pocos segundos: inténtalo de nuevo.');
+  // GDELT limita a una petición cada 5 segundos por IP: un reintento espaciado
+  async function intento() {
+    const r = await fetch(u);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
   }
-  if (!r.ok) throw new Error('El servicio de prensa (GDELT) ha limitado las peticiones o ha fallado (HTTP ' + r.status + '). Inténtalo de nuevo en unos segundos.');
   let d;
   try {
-    d = await r.json();
-  } catch (e) {
-    throw new Error('El servicio de prensa (GDELT) ha devuelto una respuesta no válida (posible límite de peticiones). Inténtalo de nuevo en unos segundos.');
+    d = await intento();
+  } catch (e1) {
+    await new Promise(res => setTimeout(res, 6500));
+    try {
+      d = await intento();
+    } catch (e2) {
+      throw new Error('El servicio de prensa (GDELT) está limitando las peticiones (máx. 1 cada 5 segundos). Inténtalo de nuevo en unos segundos.');
+    }
   }
   const lista = (d.articles || []).map(a => ({
     fuente: 'PRENSA',
@@ -198,4 +202,4 @@ async function buscarWikidata(q) {
     };
   });
   return { resultados: lista, total: lista.length, hayMas: false };
-                                                                                    }
+}
