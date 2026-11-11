@@ -125,7 +125,7 @@ async function buscarPrensa(q) {
   let consulta;
   const nombreCompleto = [q.nombre, q.ap1, q.ap2].filter(Boolean).join(' ');
   if (nombreCompleto) {
-    consulta = '"' + nombreCompleto + '" sourcelang:spanish';
+    consulta = '"' + nombreCompleto + '" (desaparecido OR desaparecida) sourcelang:spanish';
   } else {
     let donde = '';
     if (q.provinciaNombre) donde = ' "' + q.provinciaNombre + '"';
@@ -160,7 +160,11 @@ async function buscarPrensa(q) {
     oficial: false,
     id: a.url,
     titulo: a.title || 'Sin título',
-    fecha: a.seendate ? a.seendate.replace('T', ' ').replace('Z', '') : '',
+    fecha: (function(sd) {
+      if (!sd) return '';
+      const m = String(sd).match(/^(\d{4})(\d{2})(\d{2})/);
+      return m ? m[3] + '/' + m[2] + '/' + m[1] : String(sd);
+    })(a.seendate),
     resumen: (a.domain || '') + (a.sourcecountry ? ' · ' + a.sourcecountry : ''),
     foto: a.socialimage || null,
     localizado: false,
