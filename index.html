@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Llanterna · Búsqueda de personas desaparecidas</title>
+<meta name="description" content="Herramienta gratuita que consulta fuentes oficiales y públicas (CNDES, Interpol, prensa, Wikidata) para buscar personas desaparecidas y organizar pistas verificables.">
+<meta name="theme-color" content="#14100a">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="cabecera">
+  <div class="logo" aria-hidden="true">
+    <svg viewBox="0 0 64 64" width="46" height="46">
+      <defs>
+        <radialGradient id="resplandor" cx="50%" cy="58%" r="55%">
+          <stop offset="0%" stop-color="#ffd27a" stop-opacity="0.95"/>
+          <stop offset="55%" stop-color="#f5a623" stop-opacity="0.45"/>
+          <stop offset="100%" stop-color="#f5a623" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle class="halo" cx="32" cy="37" r="24" fill="url(#resplandor)"/>
+      <path d="M24 14 h16 l-2 -4 h-12 z" fill="none" stroke="#ffd27a" stroke-width="2.4" stroke-linejoin="round"/>
+      <path d="M20 20 h24 l-3 26 a4 4 0 0 1 -4 4 h-10 a4 4 0 0 1 -4 -4 z" fill="rgba(20,16,10,.55)" stroke="#f5a623" stroke-width="2.4" stroke-linejoin="round"/>
+      <path d="M29 30 q3 -5 6 0 q1 4 -3 6 q-4 -2 -3 -6 z" fill="#ffd27a"/>
+      <path d="M32 52 v4" stroke="#f5a623" stroke-width="2.4" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div>
+    <h1>Llanterna</h1>
+    <p class="lema">Buscar personas desaparecidas y seguir pistas, con fuentes verificables.</p>
+  </div>
+</header>
+
+<div class="banda-urgencia" role="note">
+  <strong>¿Caso real ahora mismo?</strong> Llama ya: <a href="tel:091">091</a> Policía · <a href="tel:062">062</a> Guardia Civil · <a href="tel:112">112</a> emergencias · Menores: <a href="tel:116000">116&nbsp;000</a>. No hay que esperar 24&nbsp;h.
+</div>
+
+<nav class="pestanas" role="tablist">
+  <button class="pestana activa" data-vista="buscar" role="tab" aria-selected="true">Buscar</button>
+  <button class="pestana" data-vista="casos" role="tab" aria-selected="false">Mis casos <span id="contadorCasos" class="mini-contador" hidden></span></button>
+  <button class="pestana" data-vista="guia" role="tab" aria-selected="false">Guía y límites</button>
+</nav>
+
+<main>
+
+<!-- ===================== VISTA BUSCAR ===================== -->
+<section id="vista-buscar" class="vista activa">
+  <form id="formBusqueda" autocomplete="off">
+    <div class="rejilla-form">
+      <label>Nombre
+        <input type="text" id="fNombre" placeholder="Nombre de pila">
+      </label>
+      <label>Primer apellido
+        <input type="text" id="fAp1">
+      </label>
+      <label>Segundo apellido
+        <input type="text" id="fAp2">
+      </label>
+      <label>Tipo de alerta
+        <select id="fTipo">
+          <option value="">Todos</option>
+          <option value="ADULTO">Adultos y mayores</option>
+          <option value="MENOR">Menores</option>
+        </select>
+      </label>
+      <label>Sexo
+        <select id="fSexo">
+          <option value="">Cualquiera</option>
+          <option value="SX-1">Hombre</option>
+          <option value="SX-2">Mujer</option>
+        </select>
+      </label>
+      <label>Edad al desaparecer
+        <select id="fEdad">
+          <option value="">Cualquiera</option>
+          <option>0-10</option><option>11-20</option><option>21-30</option>
+          <option>31-40</option><option>41-50</option><option>51-60</option>
+          <option>61-70</option><option>71-80</option><option>81-90</option>
+          <option>91-100</option><option value="101-200">+100</option>
+        </select>
+      </label>
+      <label>Comunidad autónoma
+        <select id="fComunidad">
+          <option value="">Toda España</option>
+        </select>
+      </label>
+      <label>Provincia
+        <select id="fProvincia" disabled>
+          <option value="">Todas</option>
+        </select>
+      </label>
+      <label>Año de la desaparición
+        <input type="number" id="fAnio" min="1930" max="2100" placeholder="p. ej. 2024">
+      </label>
+    </div>
+    <div class="acciones-form">
+      <button type="submit" class="boton-principal">Buscar en las fuentes</button>
+      <button type="button" id="btnAlertas" class="boton-secundario">Ver alertas activas</button>
+      <button type="button" id="btnLimpiar" class="boton-discreto">Limpiar</button>
+    </div>
+    <p class="nota-form">La búsqueda consulta en vivo cada fuente. Los nombres oficiales españoles se publican con iniciales por privacidad.</p>
+  </form>
+
+  <div id="resumenFuentes" class="fuentes" hidden></div>
+  <div id="detalleFuente" class="detalle-fuente" hidden></div>
+</section>
+
+<!-- ===================== VISTA CASOS ===================== -->
+<section id="vista-casos" class="vista">
+  <div id="listaCasos"></div>
+  <form id="formCaso" class="tarjeta nuevo-caso" autocomplete="off">
+    <h2>Nuevo caso</h2>
+    <label>Nombre o referencia del caso
+      <input type="text" id="cTitulo" required placeholder="p. ej. Búsqueda de…">
+    </label>
+    <label>Notas (circunstancias, último contacto, rasgos)
+      <textarea id="cNotas" rows="3"></textarea>
+    </label>
+    <button type="submit" class="boton-principal">Crear caso</button>
+    <p class="nota-form">Los casos se guardan solo en este navegador. Nadie más los ve. Puedes exportarlos en JSON para conservarlos.</p>
+  </form>
+
+  <div id="detalleCaso" hidden></div>
+</section>
+
+<!-- ===================== VISTA GUÍA ===================== -->
+<section id="vista-guia" class="vista">
+  <article class="tarjeta">
+    <h2>Qué hace Llanterna</h2>
+    <ul>
+      <li>Consulta en vivo el <strong>CNDES</strong> (Centro Nacional de Personas Desaparecidas, Ministerio del Interior), la base oficial española de alertas activas.</li>
+      <li>Consulta las <strong>notificaciones amarillas de Interpol</strong> (personas desaparecidas a nivel internacional).</li>
+      <li>Busca contexto en <strong>prensa reciente</strong> (GDELT) y casos documentados en <strong>Wikidata</strong>.</li>
+      <li>Permite guardar resultados como <strong>pistas</strong> de un caso, marcar su estado (sin verificar, corroborada, descartada) y generar un <strong>informe imprimible</strong> para llevar a las autoridades.</li>
+    </ul>
+  </article>
+
+  <article class="tarjeta">
+    <h2>Qué no hace</h2>
+    <ul>
+      <li>No localiza teléfonos ni accede a datos privados, domicilios ni cámaras. Solo lee información pública ya publicada por fuentes oficiales o medios.</li>
+      <li>No verifica por sí sola: una coincidencia de nombre no confirma nada. El estado «corroborada» solo lo marcas tú tras comprobarlo.</li>
+      <li>No garantiza encontrar a nadie. Si una fuente falla, lo dice en lugar de disimularlo.</li>
+      <li>No envía nada a ningún servidor: tus casos y pistas quedan en tu navegador.</li>
+    </ul>
+  </article>
+
+  <article class="tarjeta">
+    <h2>Si es un caso real: primeros pasos</h2>
+    <ol>
+      <li><strong>Denuncia de inmediato</strong> en Policía Nacional (091) o Guardia Civil (062). No existe plazo de espera de 24 horas.</li>
+      <li>Si es un menor, llama también al <strong>116&nbsp;000</strong>.</li>
+      <li>Prepara: foto reciente, descripción, ropa, último lugar y hora, personas de contacto, posibles destinos.</li>
+      <li>Conserva teléfonos, cuentas y objetos personales sin manipularlos: pueden ser pistas para los investigadores.</li>
+      <li>Difunde la alerta oficial (CNDES), no rumores: información falsa dificulta la búsqueda.</li>
+    </ol>
+  </article>
+
+  <article class="tarjeta">
+    <h2>Fuentes y enlaces oficiales</h2>
+    <ul class="enlaces-oficiales">
+      <li><a href="https://cndes-web.ses.mir.es/publico/Desaparecidos/" target="_blank" rel="noopener">CNDES · Ministerio del Interior</a> — colaboración: colaboracion-cndes@interior.es</li>
+      <li><a href="https://www.interpol.int/How-we-work/Notices/Yellow-Notices/View-Yellow-Notices" target="_blank" rel="noopener">Notificaciones amarillas de Interpol</a></li>
+      <li><a href="https://sosdesaparecidos.es/" target="_blank" rel="noopener">Asociación SOS Desaparecidos</a></li>
+      <li><a href="https://qsdglobal.org/" target="_blank" rel="noopener">QSDglobal · acompañamiento a familias</a></li>
+      <li><a href="https://missingchildreneurope.eu/" target="_blank" rel="noopener">Missing Children Europe</a></li>
+    </ul>
+    <h3>Condiciones y avisos</h3>
+    <p>Los datos de CNDES e Interpol pertenecen a sus organismos y se muestran con el mismo fin con que se publican: que la ciudadanía pueda aportar información. Si reconoces a alguien, llama al teléfono que indica su ficha; no intentes contacto directo en situaciones de riesgo.</p>
+    <p>Prensa y Wikidata son fuentes no oficiales: trátalas como contexto por verificar.</p>
+    <button id="btnBorrarDatos" class="boton-discreto">Borrar todos mis casos de este navegador</button>
+  </article>
+</section>
+
+</main>
+
+<!-- Vista de impresión del informe -->
+<div id="informeImpresion" hidden></div>
+
+<footer class="pie">
+  <p>Llanterna · herramienta gratuita de apoyo ciudadano · Los resultados enlazan siempre a su fuente original.</p>
+</footer>
+
+<script src="fuentes.js"></script>
+<script src="app.js"></script>
+</body>
+      </html>
